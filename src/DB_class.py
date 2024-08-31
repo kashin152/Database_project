@@ -1,43 +1,75 @@
+from decimal import Decimal
+
 import psycopg2
 
 
 class DBManager:
+    """Класс для работы с БД"""
 
-    def __init__(self, dbname, params):
-        self.dbname = dbname
-        self.conn = psycopg2.connect(dbname=dbname, **params)
+    def __init__(self, params):
+        self.conn = psycopg2.connect(dbname='hh_db', **params)
         self.cur = self.conn.cursor()
 
-    def get_companies_and_vacancies_count(self):
-        """
-        Получает список всех компаний и количество вакансий у каждой компании.
-        """
-        query = """SELECT company_name, COUNT(*) FROM vacancies GROUP BY company_name"""
-        self.cur.execute(query)
-        return {row[0]: row[1] for row in self.cur.fetchall()}
+    def get_companies_and_vacancies_count(self):  # TODO ИСПОЛЬЗОВАТЬ JOIN
+        """получает список всех компаний и количество вакансий у каждой компании."""
+        self.cur.execute("""
+                    SELECT employer_name, COUNT(vacancies.employer_id)
+                    FROM employers
+                    INNER JOIN vacancies USING (employer_id)
+                    GROUP BY employer_name
+                    ORDER BY COUNT DESC
+            """)
 
-    def get_all_vacancies(self):
-        """
-        Получает список всех вакансий с указанием названия компании,
-        названия вакансии и зарплаты и ссылки на вакансию.
-        """
-        query = """
-                SELECT job_title, company_name, salary_from, salary_to, currency, vacancy_url FROM vacancies
-                """
-        self.cur.execute(query)
         return self.cur.fetchall()
 
-    def get_avg_salary(self):
-        """
-        Получает среднюю зарплату по вакансиям.
-        """
+    def get_all_vacancies(self):  # TODO ИСПОЛЬЗОВАТЬ JOIN
+        """список всех вакансий с указанием названия компании, названия вакансии и зарплаты и ссылки на вакансию."""
+        self.cur.execute("""
+                    SELECT e.employer_name, v.vacancy_name, v.salary, v.vacancy_url
+                    FROM vacancies v
+                    INNER JOIN employers e USING (employer_id)
+                    WHERE v.salary IS NOT NULL AND v.salary != 0
+                    ORDER BY v.salary DESC
 
-        query = """
-        SELECT AVG(salary_from) FROM vacancies WHERE currency = 'RUR'
-        """
-        self.cur.execute(query)
+            """)
+
+        return self.cur.fetchall()
+
+    def get_avg_salary(self):  # TODO ИСПОЛЬЗОВАТЬ AVG
+        """получает среднюю зарплату по вакансиям."""
+        self.cur.execute("""
+                    SELECT AVG(salary)
+                    FROM vacancies
+            """)
+
         result = self.cur.fetchone()
-        return result[0] if result else None
+        avg_salary = Decimal(result[0])
+        formatted_avg_salary = format(avg_salary, '.2f')
+        return formatted_avg_salary
+
+    def get_vacancies_with_higher_salary(self):  # TODO ИСПОЛЬЗОВАТЬ WHERE
+        """получает список всех вакансий, у которых зарплата выше средней по всем вакансиям."""
+        avg_salary = self.get_avg_salary()[0][0]
+
+        self.cur.execute(
+            """
+            SELECT v.vacancy_name, v.salary
+            FROM vacancies v
+            WHERE v.salary > %s
+            """, (avg_salary,)
+        )
+        return self.cur.fetchall()
+
+    def get_vacancies_with_keyword(self, keyword):  # TODO ИСПОЛЬЗОВАТЬ LIKE
+        """получает список всех вакансий, в названии которых содержатся переданные в метод слова."""
+        keyword = f"%{keyword.lower()}%"
+        self.cur.execute("""
+                    SELECT vacancy_name
+                    FROM vacancies
+                    WHERE vacancy_name LIKE %s
+            """, (keyword,))
+
+        return self.cur.fetchall()
 
     def get_vacancies_with_higher_salary(self):
         """
