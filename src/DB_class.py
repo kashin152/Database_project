@@ -10,7 +10,7 @@ class DBManager:
         self.conn = psycopg2.connect(dbname='hh_db', **params)
         self.cur = self.conn.cursor()
 
-    def get_companies_and_vacancies_count(self):  # TODO ИСПОЛЬЗОВАТЬ JOIN
+    def get_companies_and_vacancies_count(self):
         """получает список всех компаний и количество вакансий у каждой компании."""
         self.cur.execute("""
                     SELECT employer_name, COUNT(vacancies.employer_id)
@@ -22,7 +22,7 @@ class DBManager:
 
         return self.cur.fetchall()
 
-    def get_all_vacancies(self):  # TODO ИСПОЛЬЗОВАТЬ JOIN
+    def get_all_vacancies(self):
         """список всех вакансий с указанием названия компании, названия вакансии и зарплаты и ссылки на вакансию."""
         self.cur.execute("""
                     SELECT e.employer_name, v.vacancy_name, v.salary, v.vacancy_url
@@ -35,7 +35,7 @@ class DBManager:
 
         return self.cur.fetchall()
 
-    def get_avg_salary(self):  # TODO ИСПОЛЬЗОВАТЬ AVG
+    def get_avg_salary(self):
         """получает среднюю зарплату по вакансиям."""
         self.cur.execute("""
                     SELECT AVG(salary)
@@ -47,7 +47,7 @@ class DBManager:
         formatted_avg_salary = format(avg_salary, '.2f')
         return formatted_avg_salary
 
-    def get_vacancies_with_higher_salary(self):  # TODO ИСПОЛЬЗОВАТЬ WHERE
+    def get_vacancies_with_higher_salary(self):
         """получает список всех вакансий, у которых зарплата выше средней по всем вакансиям."""
         avg_salary = self.get_avg_salary()[0][0]
 
@@ -60,7 +60,7 @@ class DBManager:
         )
         return self.cur.fetchall()
 
-    def get_vacancies_with_keyword(self, keyword):  # TODO ИСПОЛЬЗОВАТЬ LIKE
+    def get_vacancies_with_keyword(self, keyword):
         """получает список всех вакансий, в названии которых содержатся переданные в метод слова."""
         keyword = f"%{keyword.lower()}%"
         self.cur.execute("""
@@ -71,7 +71,7 @@ class DBManager:
 
         return self.cur.fetchall()
 
-    def get_vacancies_with_higher_salary(self):
+    def get_vacancies_with_average_salary(self):
         """
         Получает список всех вакансий, у которых зарплата выше средней по всем вакансиям.
         """
@@ -83,7 +83,7 @@ class DBManager:
         self.cur.execute(query)
         return self.cur.fetchall()
 
-    def get_vacancies_with_keyword(self, keyword):
+    def get_vacancies_by_word(self, keyword):
         """
         Получает список всех вакансий, в названии которых содержатся переданные в метод слова, например python.
         """
